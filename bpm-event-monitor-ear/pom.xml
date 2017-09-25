@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.timpact.mdb</groupId>
+        <artifactId>bpm-event-monitor-parent</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../bpm-event-monitor-parent</relativePath>
+    </parent>
+    <groupId>com.timpact.mdb</groupId>
+    <artifactId>bpm-event-monitor-ear</artifactId>
+    <version>1.0.0</version>
+    <packaging>ear</packaging>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-ear-plugin</artifactId>
+                <version>2.10.1</version>
+                <configuration>
+                    <defaultLibBundleDir>lib/</defaultLibBundleDir>
+                    <ejbModule>
+                        <groupId>com.timpact.mdb</groupId>
+                        <artifactId>bpm-event-monitor-mdb</artifactId>
+                        <bundleFilename>bpm-event-monitor-mdb-1.0.0.jar</bundleFilename>
+                    </ejbModule>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.timpact.mdb</groupId>
+            <artifactId>bpm-event-monitor-mdb</artifactId>
+            <version>1.0.0</version>
+            <type>ejb</type>
+        </dependency>
+    </dependencies>
+</project>
