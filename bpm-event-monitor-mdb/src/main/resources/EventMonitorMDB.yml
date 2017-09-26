@@ -1,0 +1,6 @@
+generateLogRequred: true
+
+esConfiguration:
+    hosts: 115.28.47.100:9200
+    index: bpm-events
+    type: process
