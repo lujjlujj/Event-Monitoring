@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) 2017 Sprinter Development Team. All rights reserved.
+ *
+ *  This software is only to be used for the purpose for which it has been
+ *  provided. No part of it is to be reproduced, disassembled, transmitted,
+ *  stored in a retrieval system, nor translated in any human or computer
+ *  language in any way for any purposes whatsoever without the prior written
+ *  consent of the Sprinter Development Team.
+ *  Infringement of copyright is a serious civil and criminal offence, which can
+ *  result in heavy fines and payment of substantial damages.
+ */
+
 package com.timpact.mdb;
 
 import org.junit.Test;
@@ -13,24 +25,27 @@ import java.util.Enumeration;
 public class MonitorEventMessageDrivenBeanTest {
 
     @Test
-    public void testOnMessage() throws Exception {
+    public void testOnMessage() throws Throwable {
         MonitorEventMessageDrivenBean bean = new MonitorEventMessageDrivenBean();
         TextMessageImpl message = new TextMessageImpl();
-        message.setText("Hi this is event");
+        message.setText("<AccountBean><id>1</id><name>zhaojd</name><email>mr_zhaojd</email><address>Guangzhou</address><birthday>1992-08</birthday></AccountBean>");
         bean.onMessage(message);
     }
 
     class TextMessageImpl implements TextMessage {
-        public void setText(String string) throws JMSException {
 
+        private String text;
+
+        public void setText(String string) throws JMSException {
+            text = string;
         }
 
         public String getText() throws JMSException {
-            return null;
+            return text;
         }
 
         public String getJMSMessageID() throws JMSException {
-            return null;
+            return "1234435";
         }
 
         public void setJMSMessageID(String id) throws JMSException {
