@@ -13,6 +13,8 @@ package com.timpact.elk;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpException;
@@ -41,6 +43,14 @@ public class ELKIndexCreator {
     private HttpClient httpClient = new HttpClient();
 
     @Test
+    public void checkListType() {
+        List list = new ArrayList();
+        if (list instanceof Object) {
+            System.out.println("Hi");
+        }
+    }
+
+    //@Test
     public void createIndex() throws JSONException, HttpException, IOException {
         PutMethod putMethod = new PutMethod(URL + INDEX_NAME);
         JSONObject masterObject = new JSONObject();

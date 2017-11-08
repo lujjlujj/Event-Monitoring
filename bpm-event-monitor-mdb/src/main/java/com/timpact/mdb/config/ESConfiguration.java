@@ -26,7 +26,13 @@ public class ESConfiguration {
     private String index;
 
     @JsonProperty
-    private String type;
+    private boolean enabled;
+
+    @JsonProperty
+    private String activityType;
+
+    @JsonProperty
+    private String processType;
 
     public String getHosts() {
         return hosts;
@@ -44,11 +50,27 @@ public class ESConfiguration {
         this.index = index;
     }
 
-    public String getType() {
-        return type;
+    public boolean isEnabled() {
+        return enabled;
     }
 
-    public void setType(String type) {
-        this.type = type;
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public String getActivityType() {
+        return activityType;
+    }
+
+    public void setActivityType(String activityType) {
+        this.activityType = activityType;
+    }
+
+    public String getProcessType() {
+        return processType;
+    }
+
+    public void setProcessType(String processType) {
+        this.processType = processType;
     }
 }
