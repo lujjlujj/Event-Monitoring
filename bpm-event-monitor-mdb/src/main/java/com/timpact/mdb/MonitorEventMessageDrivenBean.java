@@ -90,12 +90,10 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
                     log.info("BPM Monitoring Event: " + jsonStr);
                 }
                 // Send the event to elastic search
-                if (config.getEsConfiguration() != null) {
-                    insertDocument(jsonStr);
-                    //TOOD Exception Handling
+                if (config.getEsConfiguration() != null & config.getEsConfiguration().isEnabled()) {
+                    insertDocument(jsonStr, getEventType(jsonStr));
                 }
             } catch (Exception e) {
-
                 log.error(String.format("Failed to process message %s .", messageId), e);
             }
         } else {
@@ -109,15 +107,34 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
      * @param jsonStr
      * @throws Exception
      */
-    private void insertDocument(String jsonStr) throws Exception {
+    private void insertDocument(String jsonStr, String type) throws Exception {
         PostMethod postMethod = new PostMethod("http://" + config.getEsConfiguration().getHosts() + "/"
                 + config.getEsConfiguration().getIndex() + "/"
-                + config.getEsConfiguration().getType() + "?pretty");
+                + type + "?pretty");
         StringRequestEntity requestEntity = new StringRequestEntity(
                 jsonStr, "application/json", "UTF-8");
         postMethod.setRequestEntity(requestEntity);
         httpClient.executeMethod(postMethod);
         JSONObject result = new JSONObject(postMethod.getResponseBodyAsString());
         log.info(result.toString());
+    }
+
+    /**
+     * Gets event type
+     *
+     * @param jsonStr json of string
+     */
+    private String getEventType(String jsonStr) throws Exception {
+        JSONObject jsonObject = new JSONObject(jsonStr);
+        // TODO Get the type of event
+        String type = jsonObject.getString("TODO");
+        if (type.equalsIgnoreCase("Process"))
+            return config.getEsConfiguration().getProcessType();
+
+        if (type.equalsIgnoreCase("activity"))
+            return config.getEsConfiguration().getActivityType();
+
+        throw new Exception("Unsupported Event Type");
+
     }
 }

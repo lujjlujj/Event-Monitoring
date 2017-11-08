@@ -1,4 +1,4 @@
-impart sys
+import rt sys
 
 scriptBase = sys.argv[0]
 nodeName = sys.argv[1]
