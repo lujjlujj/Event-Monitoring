@@ -22,6 +22,7 @@ import com.timpact.mdb.config.MDBConfiguration;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
+import org.apache.commons.httpclient.params.HttpClientParams;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONObject;
@@ -57,6 +58,7 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
      */
     public MonitorEventMessageDrivenBean() throws Throwable {
         try {
+            // Load the configuration
             ClassLoader classLoader = getClass().getClassLoader();
             URL url = classLoader.getResource("EventMonitorMDB.yml");
             InputStream input = new FileInputStream(url.getFile());
@@ -114,6 +116,14 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
         StringRequestEntity requestEntity = new StringRequestEntity(
                 jsonStr, "application/json", "UTF-8");
         postMethod.setRequestEntity(requestEntity);
+
+        // Set the message timeout
+        if (config.getEsConfiguration().getTimeout() != 0) {
+            httpClient.getHttpConnectionManager().
+                    getParams().setConnectionTimeout(config.getEsConfiguration().getTimeout());
+            httpClient.getHttpConnectionManager().
+                    getParams().setSoTimeout(config.getEsConfiguration().getTimeout());
+        }
         httpClient.executeMethod(postMethod);
         JSONObject result = new JSONObject(postMethod.getResponseBodyAsString());
         log.info(result.toString());
@@ -127,7 +137,7 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
     private String getEventType(String jsonStr) throws Exception {
         JSONObject jsonObject = new JSONObject(jsonStr);
         // TODO Get the type of event
-        String type = jsonObject.getString("TODO");
+        String type = "Process";//jsonObject.getString("TODO");
         if (type.equalsIgnoreCase("Process"))
             return config.getEsConfiguration().getProcessType();
 

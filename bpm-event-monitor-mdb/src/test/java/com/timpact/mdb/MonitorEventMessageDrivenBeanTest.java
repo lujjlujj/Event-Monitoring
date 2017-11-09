@@ -30,6 +30,10 @@ public class MonitorEventMessageDrivenBeanTest {
         TextMessageImpl message = new TextMessageImpl();
         message.setText("<AccountBean><id>1</id><name>zhaojd</name><email>mr_zhaojd</email><address>Guangzhou</address><birthday>1992-08</birthday></AccountBean>");
         bean.onMessage(message);
+
+        message = new TextMessageImpl();
+        message.setText("<AccountBean><id>2</id><name>zhaojd</name><email>mr_zhaojd</email><address>Guangzhou</address><birthday>1992-08</birthday></AccountBean>");
+        bean.onMessage(message);
     }
 
     class TextMessageImpl implements TextMessage {

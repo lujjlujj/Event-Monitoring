@@ -34,6 +34,9 @@ public class ESConfiguration {
     @JsonProperty
     private String processType;
 
+    @JsonProperty
+    private int timeout;
+
     public String getHosts() {
         return hosts;
     }
@@ -72,5 +75,13 @@ public class ESConfiguration {
 
     public void setProcessType(String processType) {
         this.processType = processType;
+    }
+
+    public int getTimeout() {
+        return timeout;
+    }
+
+    public void setTimeout(int timeout) {
+        this.timeout = timeout;
     }
 }

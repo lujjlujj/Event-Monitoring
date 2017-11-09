@@ -22,6 +22,8 @@ public class MDBConfiguration {
     @JsonProperty
     private boolean generateLogRequred = false;
     @JsonProperty
+    private String bpmCellName;
+    @JsonProperty
     private ESConfiguration esConfiguration;
 
     public boolean isGenerateLogRequred() {
@@ -38,5 +40,13 @@ public class MDBConfiguration {
 
     public void setEsConfiguration(ESConfiguration esConfiguration) {
         this.esConfiguration = esConfiguration;
+    }
+
+    public String getBpmCellName() {
+        return bpmCellName;
+    }
+
+    public void setBpmCellName(String bpmCellName) {
+        this.bpmCellName = bpmCellName;
     }
 }
