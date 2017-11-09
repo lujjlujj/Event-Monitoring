@@ -108,6 +108,7 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
      *
      * @param jsonStr
      * @throws Exception
+     *              if any exception occurs
      */
     private void insertDocument(String jsonStr, String type) throws Exception {
         PostMethod postMethod = new PostMethod("http://" + config.getEsConfiguration().getHosts() + "/"
