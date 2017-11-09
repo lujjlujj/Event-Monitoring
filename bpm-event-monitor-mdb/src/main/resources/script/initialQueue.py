@@ -10,7 +10,7 @@ AdminTask.createSIBDestination('[-bus BPM.' + deployenv + '.Bus -name monQueueDe
 ' -type Queue -reliability ASSURED_PERSISTENT -description -cluster ' + deployenv + '.Messaging ]')
 print("Created destination on bus")
 
-#Add QCF and Queue
+#Add QCF and Message Queue
 AdminTask.createSIBDesinationFactory('wascell(cells/wascell|cell.xml)', '[-type queue -name monQCF -jndiName jms/monQCF ' + 
 '-description -category -busName BPM.' + deployenv + 'Bus -nonPersistentMapping ExpressNonPersistent ' + 
 '-readAhead Default -tempQueueNamePrefix -target -targetType BusMember -targetSignificance Preferred ' + 
