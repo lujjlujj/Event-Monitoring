@@ -1,6 +1,11 @@
 generateLogRequred: true
-
+convertXml2JsonRequired: false
+jsonVersion: 8.5.7
 esConfiguration:
     hosts: 115.28.47.100:9200
     index: bpm-events
-    type: process
+    activityType: ActivitySummary
+    processType: ProcessSummary
+    enabled: false
+    timeout: 1000
+bpmCellName: bpmCell01

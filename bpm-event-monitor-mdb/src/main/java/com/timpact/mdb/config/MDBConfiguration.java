@@ -24,7 +24,20 @@ public class MDBConfiguration {
     @JsonProperty
     private String bpmCellName;
     @JsonProperty
+    private boolean convertXml2JsonRequired;
+    @JsonProperty
     private ESConfiguration esConfiguration;
+    @JsonProperty
+    private String jsonVersion = "8.5";
+
+    public String getJsonVersion() {
+        return jsonVersion;
+    }
+
+    public void setJsonVersion(String jsonVersion) {
+        this.jsonVersion = jsonVersion;
+    }
+
 
     public boolean isGenerateLogRequred() {
         return generateLogRequred;
@@ -48,5 +61,13 @@ public class MDBConfiguration {
 
     public void setBpmCellName(String bpmCellName) {
         this.bpmCellName = bpmCellName;
+    }
+
+    public boolean isConvertXml2JsonRequired() {
+        return convertXml2JsonRequired;
+    }
+
+    public void setConvertXml2JsonRequired(boolean convertXml2JsonRequired) {
+        this.convertXml2JsonRequired = convertXml2JsonRequired;
     }
 }

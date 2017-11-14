@@ -18,11 +18,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TreeTraversingParser;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLParser;
+import com.timpact.mdb.Event.IBMBPM857JSONEventConverter;
+import com.timpact.mdb.Event.JSONEventConverter;
 import com.timpact.mdb.config.MDBConfiguration;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
-import org.apache.commons.httpclient.params.HttpClientParams;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONObject;
@@ -32,15 +33,14 @@ import javax.ejb.MessageDriven;
 import javax.jms.Message;
 import javax.jms.MessageListener;
 import javax.jms.TextMessage;
-import java.io.FileInputStream;
 import java.io.InputStream;
-import java.net.URL;
 
 /**
  * Created by Terry on 17-9-21.
  */
-@MessageDriven(mappedName = "TDB", activationConfig = {
+@MessageDriven(mappedName = "esi/eventMonitorActivationSpec", activationConfig = {
         @ActivationConfigProperty(propertyName = "acknowledgeMode", propertyValue = "Auto-acknowledge"),
+        @ActivationConfigProperty(propertyName = "destination", propertyValue = "jms/monQueue"),
         @ActivationConfigProperty(propertyName = "destinationType", propertyValue = "javax.jms.Queue")
 })
 public class MonitorEventMessageDrivenBean implements MessageListener {
@@ -51,6 +51,8 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
 
     private HttpClient httpClient = new HttpClient();
 
+    private JSONEventConverter converter;
+
     /**
      * Construct <code>MonitorEventMessageDrivenBean</code>
      *
@@ -58,17 +60,24 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
      */
     public MonitorEventMessageDrivenBean() throws Throwable {
         try {
-            // Load the configuration
+            //  Class clazz = MonitorEventMessageDrivenBean.class;
+            //InputStream inputStream = clazz.getResourceAsStream("/EventMonitorMDB.yml");
+//
+//
+//            // Load the configuration
+//            ClassLoader classLoader = getClass().getClassLoader();
+//            URL url = classLoader.getResource("EventMonitorMDB.yml");
+//            InputStream input = new FileInputStream(url.getFile());
             ClassLoader classLoader = getClass().getClassLoader();
-            URL url = classLoader.getResource("EventMonitorMDB.yml");
-            InputStream input = new FileInputStream(url.getFile());
+            InputStream inputStream = classLoader.getResourceAsStream("EventMonitorMDB.yml");
             YAMLFactory yamlFactory = new YAMLFactory();
             ObjectMapper mapper = new ObjectMapper();
             mapper.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-            YAMLParser yamlParser = yamlFactory.createParser(input);
+            YAMLParser yamlParser = yamlFactory.createParser(inputStream);
             final JsonNode node = mapper.readTree(yamlParser);
             TreeTraversingParser treeTraversingParser = new TreeTraversingParser(node);
             config = mapper.readValue(treeTraversingParser, MDBConfiguration.class);
+            converter = new IBMBPM857JSONEventConverter(config.getJsonVersion(), config.getBpmCellName());
         } catch (Exception e) {
             log.error("Failed to initiate MDBConfiguration from EventMonitorMDB.yml.", e);
             throw new Throwable();
@@ -79,21 +88,28 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
      * @param message The message from the queue
      */
     public void onMessage(Message message) {
-        log.info("Received message:" + message.toString());
+        //log.info("Received message:" + message.toString());
         String messageId = "";
         if (message instanceof TextMessage) {
             try {
                 messageId = message.getJMSMessageID().toString();
-                TextMessage textMessage = (TextMessage) message;
-                Xml2JsonConverter converter = new Xml2JsonConverter();
-                String jsonStr = converter.convert(textMessage.getText());
+                String inputStr = ((TextMessage) message).getText();
+                if (config.isConvertXml2JsonRequired()) {
+                    Xml2JsonConverter converter = new Xml2JsonConverter();
+                    inputStr = converter.convert(((TextMessage) message).getText());
+                }
+                // DO Conversion
+                JSONObject jsonObject = converter.convert(new JSONObject(inputStr));
+                if (jsonObject == null) {
+                    return;
+                }
                 // Log the event into log file
                 if (config.isGenerateLogRequred()) {
-                    log.info("BPM Monitoring Event: " + jsonStr);
+                    log.info("BPM Monitoring Event: " + jsonObject.toString());
                 }
                 // Send the event to elastic search
                 if (config.getEsConfiguration() != null & config.getEsConfiguration().isEnabled()) {
-                    insertDocument(jsonStr, getEventType(jsonStr));
+                    insertDocument(jsonObject, getEventType(jsonObject.toString()));
                 }
             } catch (Exception e) {
                 log.error(String.format("Failed to process message %s .", messageId), e);
@@ -106,16 +122,15 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
     /**
      * Send the document to elastic
      *
-     * @param jsonStr
-     * @throws Exception
-     *              if any exception occurs
+     * @param jsonObject
+     * @throws Exception if any exception occurs
      */
-    private void insertDocument(String jsonStr, String type) throws Exception {
+    private void insertDocument(JSONObject jsonObject, String type) throws Exception {
         PostMethod postMethod = new PostMethod("http://" + config.getEsConfiguration().getHosts() + "/"
                 + config.getEsConfiguration().getIndex() + "/"
                 + type + "?pretty");
         StringRequestEntity requestEntity = new StringRequestEntity(
-                jsonStr, "application/json", "UTF-8");
+                jsonObject.toString(), "application/json", "UTF-8");
         postMethod.setRequestEntity(requestEntity);
 
         // Set the message timeout
