@@ -30,27 +30,20 @@ import org.junit.Test;
  * class_comment
  * <p>
  * <b>Creation Time:</b> 2017年1月7日 上午11:20:14
- *
  */
 public class ELKIndexCreator {
 
-    private static String INDEX_NAME = "process-event-log";
+    private static String INDEX_NAME = "bpm-events";
 
-    private static String TYPE_NAME = "process";
+    private static String PROCESS_TYPE_NAME = "ProcessSummary";
+
+    private static String ACTIVITY_TYPE_NAME = "ActivitySummary";
 
     private static String URL = "http://115.28.47.100:9200/";
 
     private HttpClient httpClient = new HttpClient();
 
     @Test
-    public void checkListType() {
-        List list = new ArrayList();
-        if (list instanceof Object) {
-            System.out.println("Hi");
-        }
-    }
-
-    //@Test
     public void createIndex() throws JSONException, HttpException, IOException {
         PutMethod putMethod = new PutMethod(URL + INDEX_NAME);
         JSONObject masterObject = new JSONObject();
@@ -65,33 +58,51 @@ public class ELKIndexCreator {
         System.out.println(putMethod.getResponseBodyAsString());
     }
 
-    //@Test
+
+    @Test
     public void getIndex() throws HttpException, IOException {
         GetMethod getMethod = new GetMethod(URL + INDEX_NAME);
         httpClient.executeMethod(getMethod);
         System.out.println(getMethod.getResponseBodyAsString());
     }
 
-    //@Test
+    @Test
     public void deleteIndex() throws HttpException, IOException {
         DeleteMethod deleteMethod = new DeleteMethod(URL + INDEX_NAME);
         httpClient.executeMethod(deleteMethod);
         System.out.println(deleteMethod.getResponseBodyAsString());
     }
+    @Test
+    public void rebuildIndex() throws Exception {
+        deleteIndex();
+        createIndex();
+        updateIndexMappingForProcess();
+        updateIndexMappingForActivity();
+    }
 
-    //@Test
-    public void updateIndexMapping() throws JSONException, HttpException,
+    @Test
+    public void updateIndexMappingForProcess() throws JSONException, HttpException,
             IOException {
         PutMethod putMethod = new PutMethod(URL + INDEX_NAME + "/_mapping/"
-                + TYPE_NAME + "?pretty");
+                + PROCESS_TYPE_NAME + "?pretty");
         JSONObject propertyObject = new JSONObject();
         JSONObject fieldObject = new JSONObject();
-        fieldObject.put("taskId", createFieldPropertyJSONObject("string", "not_analyzed", ""));
-        fieldObject.put("taskName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
-        fieldObject.put("priority", createFieldPropertyJSONObject("string", "not_analyzed", ""));
-        fieldObject.put("startDate", createFieldPropertyJSONObject("date", "not_analyzed", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ"));
-        fieldObject.put("completionDate", createFieldPropertyJSONObject("date", "not_analyzed", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ"));
-        fieldObject.put("actionBy", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("bpmCellName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("jsonVersion", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("action", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("eventType", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("startTime", createFieldPropertyJSONObject("date", "not_analyzed", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ"));
+        fieldObject.put("completionTime", createFieldPropertyJSONObject("date", "not_analyzed", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ"));
+        fieldObject.put("eventTime", createFieldPropertyJSONObject("date", "not_analyzed", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ"));
+        fieldObject.put("processInstanceId", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("processName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("processVersion", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("processFullId", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("processInstanceFullId", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("processInstanceUUID", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("processStatus", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("applicationName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+
         propertyObject.put("properties", fieldObject);
         StringRequestEntity requestEntity = new StringRequestEntity(
                 propertyObject.toString(), "application/json", "UTF-8");
@@ -100,38 +111,82 @@ public class ELKIndexCreator {
         System.out.println(putMethod.getResponseBodyAsString());
     }
 
-    //@Test
-    public void getIndexMapping() throws HttpException, IOException {
+    @Test
+    public void updateIndexMappingForActivity() throws JSONException, HttpException,
+            IOException {
+        PutMethod putMethod = new PutMethod(URL + INDEX_NAME + "/_mapping/"
+                + ACTIVITY_TYPE_NAME + "?pretty");
+        JSONObject propertyObject = new JSONObject();
+        JSONObject fieldObject = new JSONObject();
+        fieldObject.put("bpmCellName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("jsonVersion", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("action", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("startTime", createFieldPropertyJSONObject("date", "not_analyzed", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ"));
+        fieldObject.put("completionTime", createFieldPropertyJSONObject("date", "not_analyzed", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ"));
+        fieldObject.put("eventTime", createFieldPropertyJSONObject("date", "not_analyzed", "yyyy-MM-dd'T'HH:mm:ss.SSSZZ"));
+        fieldObject.put("processInstanceId", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("processName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("processVersion", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("processFullId", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("processInstanceFullId", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("processInstanceUUID", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("applicationName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("activityVersion", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("activityFullId", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("activityName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("activityType", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+
+        propertyObject.put("properties", fieldObject);
+        StringRequestEntity requestEntity = new StringRequestEntity(
+                propertyObject.toString(), "application/json", "UTF-8");
+        putMethod.setRequestEntity(requestEntity);
+        httpClient.executeMethod(putMethod);
+        System.out.println(putMethod.getResponseBodyAsString());
+    }
+
+    @Test
+    public void getIndexMappingForProcess() throws HttpException, Exception {
+
+
         GetMethod getMethod = new GetMethod(URL + INDEX_NAME + "/_mapping/"
-                + TYPE_NAME + "?pretty");
+                + PROCESS_TYPE_NAME + "?pretty");
         httpClient.executeMethod(getMethod);
         System.out.println(getMethod.getResponseBodyAsString());
 
     }
 
-    //Test
-    public void insertDocument() throws Exception{
-        PostMethod postMethod = new PostMethod(URL + INDEX_NAME + "/"
-                + TYPE_NAME + "?pretty");
-        JSONObject propertyObject = new JSONObject();
-        propertyObject.put("taskId", "12345");
-        propertyObject.put("taskName", "Data Capture");
-        propertyObject.put("priority", "High");
-        propertyObject.put("startDate", "2017-04-02T16:00:00.000Z");
-        if (!StringUtils.isEmpty("2017-04-02T16:00:00.000Z")) {
-           propertyObject.put("completionDate", "2017-04-02T16:00:00.000Z");
-        }
-        propertyObject.put("actionBy", "Terry J J LU");
-        StringRequestEntity requestEntity = new StringRequestEntity(
-                propertyObject.toString(), "application/json", "UTF-8");
-        postMethod.setRequestEntity(requestEntity);
+    @Test
+    public void searchDataForProcess() throws HttpException, Exception {
+        JSONObject condition = new JSONObject();
+        //condition.put("_source.processInstanceUUID", "bpmCell01-c904b3b1-afc1-4698-bf5a-a20892c20275.2064.f5fa8035-29e3-4ee9-9dfb-cda7ae1f249d.705");
+        condition.put("_id","AV_AhpMG0_Pl3klLvTRT");
+        JSONObject term = new JSONObject();
+        term.put("term", condition);
+        JSONObject query = new JSONObject();
+        query.put("query", term);
+
+//        GetMethod postMethod = new GetMethod(URL + INDEX_NAME + "/"
+//                + PROCESS_TYPE_NAME + "/_search?q=processInstanceUUID:bpmCell01-c904b3b1-afc1-4698-bf5a-a20892c20275.2064.f5fa8035-29e3-4ee9-9dfb-cda7ae1f249d.705&pretty");
+        GetMethod postMethod = new GetMethod(URL + INDEX_NAME + "/"
+                + PROCESS_TYPE_NAME + "/_search?pretty");
+
+
         httpClient.executeMethod(postMethod);
-        JSONObject result = new JSONObject(postMethod.getResponseBodyAsString());
-        System.out.println(result.get("created"));
+        System.out.println(postMethod.getResponseBodyAsString());
     }
 
+    @Test
+    public void searchDataForActivity() throws HttpException, IOException {
+        PostMethod potMethod = new PostMethod(URL + INDEX_NAME + "/"
+                + ACTIVITY_TYPE_NAME + "/_search?q=activityFullId:c904b3b1-afc1-4698-bf5a-a20892c20275.2064.f5fa8035-29e3-4ee9-9dfb-cda7ae1f249d.658.7&pretty");
+        System.out.print(potMethod.getURI().toString());
+        httpClient.executeMethod(potMethod);
+        System.out.println(potMethod.getResponseBodyAsString());
+    }
+
+
     private JSONObject createFieldPropertyJSONObject(String type, String index,
-            String format) throws JSONException {
+                                                     String format) throws JSONException {
         JSONObject property = new JSONObject();
         property.put("type", type);
         if (!StringUtils.isEmpty(index)) {

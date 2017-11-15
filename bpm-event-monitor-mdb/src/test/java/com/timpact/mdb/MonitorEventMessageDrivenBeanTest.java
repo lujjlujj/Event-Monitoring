@@ -12,11 +12,13 @@
 
 package com.timpact.mdb;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
 import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.TextMessage;
+import java.io.File;
 import java.util.Enumeration;
 
 /**
@@ -25,15 +27,25 @@ import java.util.Enumeration;
 public class MonitorEventMessageDrivenBeanTest {
 
     @Test
-    public void testOnMessage() throws Throwable {
+    public void testActivityEvent() throws Throwable {
         MonitorEventMessageDrivenBean bean = new MonitorEventMessageDrivenBean();
         TextMessageImpl message = new TextMessageImpl();
-        message.setText("<AccountBean><id>1</id><name>zhaojd</name><email>mr_zhaojd</email><address>Guangzhou</address><birthday>1992-08</birthday></AccountBean>");
+        message.setText(FileUtils.readFileToString(new File(getClass().getClassLoader().getResource("IBMBPMEvent/activity_active").getFile()), "UTF-8"));
         bean.onMessage(message);
+        Thread.sleep(1000);
+        message.setText(FileUtils.readFileToString(new File(getClass().getClassLoader().getResource("IBMBPMEvent/activity_completed").getFile()), "UTF-8"));
+        bean.onMessage(message);
+    }
 
-        message = new TextMessageImpl();
-        message.setText("<AccountBean><id>2</id><name>zhaojd</name><email>mr_zhaojd</email><address>Guangzhou</address><birthday>1992-08</birthday></AccountBean>");
+    @Test
+    public void testProcessEvent() throws Throwable {
+        MonitorEventMessageDrivenBean bean = new MonitorEventMessageDrivenBean();
+        TextMessageImpl message = new TextMessageImpl();
+        message.setText(FileUtils.readFileToString(new File(getClass().getClassLoader().getResource("IBMBPMEvent/process_started").getFile()), "UTF-8"));
         bean.onMessage(message);
+       // Thread.sleep(1000);
+       // message.setText(FileUtils.readFileToString(new File(getClass().getClassLoader().getResource("IBMBPMEvent/process_completed").getFile()), "UTF-8"));
+       // bean.onMessage(message);
     }
 
     class TextMessageImpl implements TextMessage {

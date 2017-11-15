@@ -37,6 +37,9 @@ public class ESConfiguration {
     @JsonProperty
     private int timeout;
 
+    @JsonProperty
+    private boolean mergeEventRequired;
+
     public String getHosts() {
         return hosts;
     }
@@ -83,5 +86,13 @@ public class ESConfiguration {
 
     public void setTimeout(int timeout) {
         this.timeout = timeout;
+    }
+
+    public boolean isMergeEventRequired() {
+        return mergeEventRequired;
+    }
+
+    public void setMergeEventRequired(boolean mergeEventRequired) {
+        this.mergeEventRequired = mergeEventRequired;
     }
 }
