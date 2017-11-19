@@ -113,6 +113,9 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
                             jsonObject.put("startTime", jsonObject.getString("eventTime"));
                             insertDocument(jsonObject, getIndexType(eventType));
                         }
+                        if (action.equals(IBMBPMEventConstants.STATUS_ACTIVITY_ACTIVE)) {
+                            processActiveEvent(eventType, "activityFullId:" + jsonObject.getString("activityFullId"), jsonObject);
+                        }
                         if (action.equals(IBMBPMEventConstants.STATUS_ACTIVITY_COMPLETED)) {
                             processCompletionEvent(eventType, "activityFullId:" + jsonObject.getString("activityFullId"), jsonObject);
                         }
@@ -170,6 +173,16 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
         JSONObject result = searchEvent(eventType, queryCondition);
         if (result != null) {
             jsonObject.put("completionTime", jsonObject.get("eventTime"));
+            updateDocument(getIndexType(eventType), result.getString("_id"), jsonObject);
+        } else {
+            insertDocument(jsonObject, getIndexType(eventType));
+        }
+    }
+
+    private void processActiveEvent(String eventType, String queryCondition, JSONObject jsonObject) throws Exception {
+        JSONObject result = searchEvent(eventType, queryCondition);
+        if (result != null) {
+            jsonObject.put("startTime", jsonObject.get("eventTime"));
             updateDocument(getIndexType(eventType), result.getString("_id"), jsonObject);
         } else {
             insertDocument(jsonObject, getIndexType(eventType));
