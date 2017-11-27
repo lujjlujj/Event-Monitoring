@@ -16,6 +16,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+
 /**
  * Created by Terry on 17-9-26.
  */
@@ -132,22 +133,33 @@ public class IBMBPM857JSONEventConverter implements JSONEventConverter {
         // Application Data
         if (root.getJSONObject("mon:monitorEvent").has("mon:applicationData")) {
             JSONObject applicationData = root.getJSONObject("mon:monitorEvent").getJSONObject("mon:applicationData");
-            if (applicationData.has("wle:tracking-point") && applicationData.getJSONObject("wle:tracking-point").has("wle:tracked-field")) {
-                JSONArray trackedFields = applicationData.getJSONObject("wle:tracking-point").getJSONArray("wle:tracked-field");
-                JSONArray targetTrackedFields = new JSONArray();
-                for (int i = 0; i < trackedFields.length(); i++) {
-                    JSONObject trackedField = trackedFields.getJSONObject(i);
-                    JSONObject targetTrackedField = new JSONObject();
-                    String fieldName = trackedField.getString("wle:name");
-                    String fieldType = trackedField.getString("wle:type").replaceAll("xs:", "");
-                    fieldName = fieldName + "_" + fieldType;
-                    String fieldValue = trackedField.getString("content");
-                    targetTrackedField.put(fieldName, fieldValue);
-                    targetTrackedFields.put(targetTrackedField);
-                }
-                targetObject.put("businessFields", targetTrackedFields);
-            }
+            targetObject.put("businessFields", retrieveTrackingPointData(applicationData, "wle:tracked-field"));
+            targetObject.put("kpiData", retrieveTrackingPointData(applicationData, "wle:kpi-data"));
         }
         return targetObject;
+    }
+
+    /**
+     * @param applicationData Application Data with <code>JSONObject</code>
+     * @param sectionKey      the key of section
+     * @return <code>JSONArray</code>
+     * @throws Exception if any error occurs
+     */
+    private JSONArray retrieveTrackingPointData(JSONObject applicationData, String sectionKey) throws Exception {
+        JSONArray targetTrackedFields = new JSONArray();
+        if (applicationData.has("wle:tracking-point") && applicationData.getJSONObject("wle:tracking-point").has(sectionKey)) {
+            JSONArray trackedFields = applicationData.getJSONObject("wle:tracking-point").getJSONArray(sectionKey);
+            for (int i = 0; i < trackedFields.length(); i++) {
+                JSONObject trackedField = trackedFields.getJSONObject(i);
+                JSONObject targetTrackedField = new JSONObject();
+                String fieldName = trackedField.getString("wle:name");
+                String fieldType = trackedField.getString("wle:type").replaceAll("xs:", "");
+                fieldName = fieldName + "_" + fieldType;
+                String fieldValue = trackedField.getString("content");
+                targetTrackedField.put(fieldName, fieldValue);
+                targetTrackedFields.put(targetTrackedField);
+            }
+        }
+        return targetTrackedFields;
     }
 }
