@@ -22,6 +22,9 @@ public class IBMBPMEventConstants {
 
     public final static String STATUS_ACTIVITY_ACTIVE = "ACTIVITY_ACTIVE";
     public final static String STATUS_ACTIVITY_COMPLETED = "ACTIVITY_COMPLETED";
+    public final static String STATUS_ACTIVITY_RESOURCE_ASSIGNED = "ACTIVITY_RESOURCE_ASSIGNED";
     public final static String STATUS_PROCESS_STARTED = "PROCESS_STARTED";
     public final static String STATUS_PROCESS_COMPLETED = "PROCESS_COMPLETED";
+    public final static String STATUS_PROCESS_SUSPENDED = "PROCESS_SUSPENDED";
+    public final static String STATUS_PROCESS_RESUMED = "PROCESS_RESUMED";
 }

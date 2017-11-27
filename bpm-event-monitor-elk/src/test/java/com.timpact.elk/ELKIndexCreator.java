@@ -102,7 +102,6 @@ public class ELKIndexCreator {
         fieldObject.put("processInstanceUUID", createFieldPropertyJSONObject("string", "not_analyzed", ""));
         fieldObject.put("processStatus", createFieldPropertyJSONObject("string", "not_analyzed", ""));
         fieldObject.put("applicationName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
-
         propertyObject.put("properties", fieldObject);
         StringRequestEntity requestEntity = new StringRequestEntity(
                 propertyObject.toString(), "application/json", "UTF-8");
@@ -135,7 +134,9 @@ public class ELKIndexCreator {
         fieldObject.put("activityFullId", createFieldPropertyJSONObject("string", "not_analyzed", ""));
         fieldObject.put("activityName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
         fieldObject.put("activityType", createFieldPropertyJSONObject("string", "not_analyzed", ""));
-
+        fieldObject.put("assigneeType", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("assigneeId", createFieldPropertyJSONObject("string", "not_analyzed", ""));
+        fieldObject.put("assigneeName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
         propertyObject.put("properties", fieldObject);
         StringRequestEntity requestEntity = new StringRequestEntity(
                 propertyObject.toString(), "application/json", "UTF-8");
@@ -149,7 +150,7 @@ public class ELKIndexCreator {
 
 
         GetMethod getMethod = new GetMethod(URL + INDEX_NAME + "/_mapping/"
-                + PROCESS_TYPE_NAME + "?pretty");
+                + PROCESS_TYPE_NAME + "?size=60&pretty");
         httpClient.executeMethod(getMethod);
         System.out.println(getMethod.getResponseBodyAsString());
 
@@ -178,7 +179,7 @@ public class ELKIndexCreator {
     @Test
     public void searchDataForActivity() throws HttpException, IOException {
         PostMethod potMethod = new PostMethod(URL + INDEX_NAME + "/"
-                + ACTIVITY_TYPE_NAME + "/_search?q=activityFullId:c904b3b1-afc1-4698-bf5a-a20892c20275.2064.f5fa8035-29e3-4ee9-9dfb-cda7ae1f249d.658.7&pretty");
+                + ACTIVITY_TYPE_NAME + "/_search?size=70&pretty");
         System.out.print(potMethod.getURI().toString());
         httpClient.executeMethod(potMethod);
         System.out.println(potMethod.getResponseBodyAsString());

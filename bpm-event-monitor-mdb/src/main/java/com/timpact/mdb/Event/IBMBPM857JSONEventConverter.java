@@ -36,9 +36,11 @@ public class IBMBPM857JSONEventConverter implements JSONEventConverter {
         activityTypelist.add(IBMBPMEventConstants.STATUS_ACTIVITY_READY);
         activityTypelist.add(IBMBPMEventConstants.STATUS_ACTIVITY_ACTIVE);
         activityTypelist.add(IBMBPMEventConstants.STATUS_ACTIVITY_COMPLETED);
-
+        activityTypelist.add(IBMBPMEventConstants.STATUS_ACTIVITY_RESOURCE_ASSIGNED);
         processTypelist.add(IBMBPMEventConstants.STATUS_PROCESS_STARTED);
         processTypelist.add(IBMBPMEventConstants.STATUS_PROCESS_COMPLETED);
+        processTypelist.add(IBMBPMEventConstants.STATUS_PROCESS_RESUMED);
+        processTypelist.add(IBMBPMEventConstants.STATUS_PROCESS_SUSPENDED);
     }
 
     public JSONObject convert(JSONObject root) throws Exception {
@@ -91,7 +93,6 @@ public class IBMBPM857JSONEventConverter implements JSONEventConverter {
                     String processStatus = model.getJSONObject("mon:instance").getString("mon:state");
                     targetObject.put("processStatus", processStatus);
                 }
-
             }
             if (modelType.equalsIgnoreCase("wle:processApplication")) {
                 String applicationName = model.getString("mon:name");
@@ -111,6 +112,16 @@ public class IBMBPM857JSONEventConverter implements JSONEventConverter {
                 JSONObject taskInstance = model.getJSONObject("mon:instance");
                 String activityShortId = taskInstance.getString("mon:id");
                 targetObject.put("activityShortId", activityShortId);
+                // Handle user role
+                if (taskInstance.has("mon:role") && taskInstance.getJSONObject("mon:role").has("mon:id")) {
+                    JSONObject assigneeObject = taskInstance.getJSONObject("mon:role");
+                    targetObject.put("assigneeType", assigneeObject.getString("mon:id"));
+                    if (assigneeObject.has("mon:resource")) {
+                        JSONObject resourceObject = assigneeObject.getJSONObject("mon:resource");
+                        targetObject.put("assigneeId", resourceObject.getString("mon:id"));
+                        targetObject.put("assigneeName", resourceObject.getString("mon:name"));
+                    }
+                }
             }
         }
         if (targetObject.has("activityShortId")) {
@@ -118,6 +129,7 @@ public class IBMBPM857JSONEventConverter implements JSONEventConverter {
             targetObject.put("activityFullId", activityFullId);
             targetObject.remove("activityShortId");
         }
+        // Application Data
         if (root.getJSONObject("mon:monitorEvent").has("mon:applicationData")) {
             JSONObject applicationData = root.getJSONObject("mon:monitorEvent").getJSONObject("mon:applicationData");
             if (applicationData.has("wle:tracking-point") && applicationData.getJSONObject("wle:tracking-point").has("wle:tracked-field")) {

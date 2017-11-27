@@ -24,12 +24,12 @@ import com.timpact.mdb.Event.JSONEventConverter;
 import com.timpact.mdb.config.MDBConfiguration;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
-import org.apache.commons.httpclient.methods.EntityEnclosingMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.ejb.ActivationConfigProperty;
@@ -38,7 +38,6 @@ import javax.jms.Message;
 import javax.jms.MessageListener;
 import javax.jms.TextMessage;
 import java.io.InputStream;
-import java.util.Iterator;
 
 /**
  * Created by Terry on 17-9-21.
@@ -91,6 +90,7 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
             try {
                 messageId = message.getJMSMessageID().toString();
                 String inputStr = ((TextMessage) message).getText();
+                log.info(inputStr);
                 if (config.isConvertXml2JsonRequired()) {
                     Xml2JsonConverter converter = new Xml2JsonConverter();
                     inputStr = converter.convert(((TextMessage) message).getText());
@@ -109,15 +109,23 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
                     String eventType = jsonObject.getString("eventType");
                     String action = jsonObject.getString("action");
                     if (config.getEsConfiguration().isMergeEventRequired()) {
-                        if (action.equals(IBMBPMEventConstants.STATUS_ACTIVITY_READY) || action.equals(IBMBPMEventConstants.STATUS_PROCESS_STARTED)) {
+                        if (action.equals(IBMBPMEventConstants.STATUS_PROCESS_STARTED)) {
                             jsonObject.put("startTime", jsonObject.getString("eventTime"));
                             insertDocument(jsonObject, getIndexType(eventType));
                         }
-                        if (action.equals(IBMBPMEventConstants.STATUS_ACTIVITY_ACTIVE)) {
+                        // Handle Activity Event
+                        if (action.equals(IBMBPMEventConstants.STATUS_ACTIVITY_ACTIVE) || action.equals(IBMBPMEventConstants.STATUS_ACTIVITY_READY)) {
                             processActiveEvent(eventType, "activityFullId:" + jsonObject.getString("activityFullId"), jsonObject);
                         }
                         if (action.equals(IBMBPMEventConstants.STATUS_ACTIVITY_COMPLETED)) {
                             processCompletionEvent(eventType, "activityFullId:" + jsonObject.getString("activityFullId"), jsonObject);
+                        }
+                        if (action.equals(IBMBPMEventConstants.STATUS_ACTIVITY_RESOURCE_ASSIGNED)) {
+                            processUpdateEvent(eventType, "activityFullId:" + jsonObject.getString("activityFullId"), jsonObject);
+                        }
+                        // Handle Process Event
+                        if (action.equals(IBMBPMEventConstants.STATUS_PROCESS_RESUMED) || action.equals(IBMBPMEventConstants.STATUS_PROCESS_SUSPENDED)) {
+                            processUpdateEvent(eventType, "processInstanceUUID:" + jsonObject.getString("processInstanceUUID"), jsonObject);
                         }
                         if (action.equals(IBMBPMEventConstants.STATUS_PROCESS_COMPLETED)) {
                             processCompletionEvent(eventType, "processInstanceUUID:" + jsonObject.getString("processInstanceUUID"), jsonObject);
@@ -156,7 +164,19 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
         handlerResult(getMethod);
         JSONObject result = new JSONObject(getMethod.getResponseBodyAsString());
         if (result.has("hits") && result.getJSONObject("hits").getInt("total") > 0) {
-            return result.getJSONObject("hits").getJSONArray("hits").getJSONObject(0);
+            int totalNumber = result.getJSONObject("hits").getInt("total");
+            if (totalNumber == 1) {
+                return result.getJSONObject("hits").getJSONArray("hits").getJSONObject(0);
+            } else {
+                JSONArray array = result.getJSONObject("hits").getJSONArray("hits");
+                for (int i = 0; i < totalNumber; i++) {
+                    JSONObject jsonObject = array.getJSONObject(i);
+                    if (jsonObject.getJSONObject("_source").has("startTime")) {
+                            return array.getJSONObject(i);
+                    }
+                }
+                return array.getJSONObject(0);
+            }
         } else if (result.has("error")) {
             log.error(String.format("Failed to search %s event with condition (%s), error: %s.", eventType, queryCondition,
                     result.getJSONObject("error").getJSONObject("root_cause").getString("reason")));
@@ -167,7 +187,14 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
         }
     }
 
-
+    private void processUpdateEvent(String eventType, String queryCondition, JSONObject jsonObject) throws Exception {
+        JSONObject result = searchEvent(eventType, queryCondition);
+        if (result != null) {
+            updateDocument(getIndexType(eventType), result.getString("_id"), jsonObject);
+        } else {
+            insertDocument(jsonObject, getIndexType(eventType));
+        }
+    }
 
     private void processCompletionEvent(String eventType, String queryCondition, JSONObject jsonObject) throws Exception {
         JSONObject result = searchEvent(eventType, queryCondition);
@@ -182,9 +209,12 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
     private void processActiveEvent(String eventType, String queryCondition, JSONObject jsonObject) throws Exception {
         JSONObject result = searchEvent(eventType, queryCondition);
         if (result != null) {
-            jsonObject.put("startTime", jsonObject.get("eventTime"));
+            if (!result.getJSONObject("_source").has("startTime")) {
+                jsonObject.put("startTime", jsonObject.get("eventTime"));
+            }
             updateDocument(getIndexType(eventType), result.getString("_id"), jsonObject);
         } else {
+            jsonObject.put("startTime", jsonObject.get("eventTime"));
             insertDocument(jsonObject, getIndexType(eventType));
         }
     }

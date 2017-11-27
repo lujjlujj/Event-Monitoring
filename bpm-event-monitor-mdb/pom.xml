@@ -16,12 +16,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.timpact.mdb</groupId>
+        <groupId>com.timpact.dbo</groupId>
         <artifactId>bpm-event-monitor-parent</artifactId>
         <version>1.0.0</version>
         <relativePath>../bpm-event-monitor-parent</relativePath>
     </parent>
-    <groupId>com.timpact.mdb</groupId>
+    <groupId>com.timpact.dbo</groupId>
     <artifactId>bpm-event-monitor-mdb</artifactId>
     <version>1.0.0</version>
     <packaging>ejb</packaging>
