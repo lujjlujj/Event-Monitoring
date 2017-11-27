@@ -9,7 +9,6 @@
  *  Infringement of copyright is a serious civil and criminal offence, which can
  *  result in heavy fines and payment of substantial damages.
  */
-
 package com.timpact.mdb;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -81,6 +80,8 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
     }
 
     /**
+     * Listens the message from message queue.
+     *
      * @param message The message from the queue
      */
     public void onMessage(Message message) {
@@ -88,7 +89,7 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
         String messageId = "";
         if (message instanceof TextMessage) {
             try {
-                messageId = message.getJMSMessageID().toString();
+                messageId = message.getJMSMessageID();
                 String inputStr = ((TextMessage) message).getText();
                 log.info(inputStr);
                 if (config.isConvertXml2JsonRequired()) {
@@ -143,25 +144,40 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
         }
     }
 
-    private void updateDocument(String indexType, String indexId, JSONObject jsonObject) throws Exception {
+    /**
+     * Updates the event document.
+     *
+     * @param indexType  type of index in elasticsearch
+     * @param eventId    event document id
+     * @param jsonObject the json object to update
+     * @throws Exception if any error occurs.
+     */
+    private void updateEventDocument(String indexType, String eventId, JSONObject jsonObject) throws Exception {
         PostMethod postMethod = new PostMethod("http://" + config.getEsConfiguration().getHosts() + "/"
                 + config.getEsConfiguration().getIndex() + "/"
-                + indexType + "/" + indexId + "/_update?pretty");
+                + indexType + "/" + eventId + "/_update?pretty");
         JSONObject data = new JSONObject();
         data.put("doc", jsonObject);
         StringRequestEntity requestEntity = new StringRequestEntity(
                 data.toString(), "application/json", "UTF-8");
         postMethod.setRequestEntity(requestEntity);
         httpClient.executeMethod(postMethod);
-        handlerResult(postMethod);
+        handleHttpResponse(postMethod);
     }
 
+    /**
+     * Performs event search with specified condition.
+     *
+     * @param eventType      the type of event (process or activity)
+     * @param queryCondition condition to enquire the event from elasticsearch service
+     * @throws Exception if any error occurs
+     */
     private JSONObject searchEvent(String eventType, String queryCondition) throws Exception {
         GetMethod getMethod = new GetMethod("http://" + config.getEsConfiguration().getHosts() + "/"
                 + config.getEsConfiguration().getIndex() + "/"
                 + getIndexType(eventType) + "/_search?q=" + queryCondition + "&pretty");
         httpClient.executeMethod(getMethod);
-        handlerResult(getMethod);
+        handleHttpResponse(getMethod);
         JSONObject result = new JSONObject(getMethod.getResponseBodyAsString());
         if (result.has("hits") && result.getJSONObject("hits").getInt("total") > 0) {
             int totalNumber = result.getJSONObject("hits").getInt("total");
@@ -172,7 +188,7 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
                 for (int i = 0; i < totalNumber; i++) {
                     JSONObject jsonObject = array.getJSONObject(i);
                     if (jsonObject.getJSONObject("_source").has("startTime")) {
-                            return array.getJSONObject(i);
+                        return array.getJSONObject(i);
                     }
                 }
                 return array.getJSONObject(0);
@@ -187,32 +203,62 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
         }
     }
 
+    /**
+     * Proceeds interim event update.
+     *
+     * @param eventType      the type of event (process or activity)
+     * @param queryCondition condition to enquire the event from elasticsearch service
+     * @param jsonObject     the jsonObject to insert
+     * @throws Exception if any error occurs
+     */
     private void processUpdateEvent(String eventType, String queryCondition, JSONObject jsonObject) throws Exception {
         JSONObject result = searchEvent(eventType, queryCondition);
         if (result != null) {
-            updateDocument(getIndexType(eventType), result.getString("_id"), jsonObject);
+            updateEventDocument(getIndexType(eventType), result.getString("_id"), jsonObject);
         } else {
-            insertDocument(jsonObject, getIndexType(eventType));
+            log.error(String.format("Fail to find out existing event for {%s}.", jsonObject.toString()));
         }
     }
 
+    /**
+     * Proceeds the insert or update for completion event. Need to consider two status
+     * {@link IBMBPMEventConstants#STATUS_ACTIVITY_COMPLETED & IBMBPMEventConstants#STATUS_PROCESS_COMPLETED}
+     * If any event is existing in elasticsearch service, it will perform update, otherwise, insert the new
+     * record.
+     *
+     * @param eventType      the type of event (process or activity)
+     * @param queryCondition condition to enquire the event from elasticsearch service
+     * @param jsonObject     the jsonObject to insert
+     * @throws Exception if any error occurs
+     */
     private void processCompletionEvent(String eventType, String queryCondition, JSONObject jsonObject) throws Exception {
         JSONObject result = searchEvent(eventType, queryCondition);
         if (result != null) {
             jsonObject.put("completionTime", jsonObject.get("eventTime"));
-            updateDocument(getIndexType(eventType), result.getString("_id"), jsonObject);
+            updateEventDocument(getIndexType(eventType), result.getString("_id"), jsonObject);
         } else {
             insertDocument(jsonObject, getIndexType(eventType));
         }
     }
 
+    /**
+     * Proceeds the insert or update for active event. Need to consider following status
+     * {@link IBMBPMEventConstants#STATUS_ACTIVITY_READY & IBMBPMEventConstants#STATUS_ACTIVITY_ACTIVE}
+     * If any event is existing in elasticsearch service, it will perform update, otherwise, insert the new
+     * record.
+     *
+     * @param eventType      the type of event (process or activity)
+     * @param queryCondition condition to enquire the event from elasticsearch service
+     * @param jsonObject     the jsonObject to insert
+     * @throws Exception if any error occurs
+     */
     private void processActiveEvent(String eventType, String queryCondition, JSONObject jsonObject) throws Exception {
         JSONObject result = searchEvent(eventType, queryCondition);
         if (result != null) {
             if (!result.getJSONObject("_source").has("startTime")) {
                 jsonObject.put("startTime", jsonObject.get("eventTime"));
             }
-            updateDocument(getIndexType(eventType), result.getString("_id"), jsonObject);
+            updateEventDocument(getIndexType(eventType), result.getString("_id"), jsonObject);
         } else {
             jsonObject.put("startTime", jsonObject.get("eventTime"));
             insertDocument(jsonObject, getIndexType(eventType));
@@ -220,9 +266,10 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
     }
 
     /**
-     * Send the document to elastic
+     * Sends the document to elasticsearch service.
      *
-     * @param jsonObject
+     * @param jsonObject the json object need to insert into elasticsearch service
+     * @param type       the type of the index {activity or process}
      * @throws Exception if any exception occurs
      */
     private void insertDocument(JSONObject jsonObject, String type) throws Exception {
@@ -241,11 +288,11 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
                     getParams().setSoTimeout(config.getEsConfiguration().getTimeout());
         }
         httpClient.executeMethod(postMethod);
-        handlerResult(postMethod);
+        handleHttpResponse(postMethod);
     }
 
     /**
-     * Gets event type
+     * Gets event type.
      *
      * @param type of the event
      */
@@ -260,7 +307,13 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
 
     }
 
-    private void handlerResult(HttpMethodBase method) throws Exception {
+    /**
+     * Handles http response from elasticsearch server.
+     *
+     * @param method {@link HttpMethodBase}
+     * @throws Exception if any error occurs
+     */
+    private void handleHttpResponse(HttpMethodBase method) throws Exception {
         JSONObject result = new JSONObject(method.getResponseBodyAsString());
         log.info(result.toString());
     }

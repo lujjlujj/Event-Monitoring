@@ -9,7 +9,6 @@
  *  Infringement of copyright is a serious civil and criminal offence, which can
  *  result in heavy fines and payment of substantial damages.
  */
-
 package com.timpact.mdb.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;

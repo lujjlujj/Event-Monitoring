@@ -30,7 +30,12 @@ public class IBMBPM857JSONEventConverter implements JSONEventConverter {
 
     private List<String> processTypelist = new ArrayList<String>();
 
-
+    /**
+     * Constructs <code>IBMBPM857JSONEventConverter</code>
+     *
+     * @param jsonVersion the version of json format
+     * @param bpmCellName the bpm cell name in the server
+     */
     public IBMBPM857JSONEventConverter(String jsonVersion, String bpmCellName) {
         this.jsonVersion = jsonVersion;
         this.bpmCellName = bpmCellName;
@@ -44,6 +49,14 @@ public class IBMBPM857JSONEventConverter implements JSONEventConverter {
         processTypelist.add(IBMBPMEventConstants.STATUS_PROCESS_SUSPENDED);
     }
 
+    /**
+     * Converts the original <code>JSONObject</code> to expected <code>JSONObject</code>. Basically, it will
+     * reduce the number of level on the original <code>JSONObject</code> which will simply the json structure.
+     *
+     * @param root original <code>JSONObject</code>
+     * @return target <code>JSONObject</code>
+     * @throws Exception if any error occurs.
+     */
     public JSONObject convert(JSONObject root) throws Exception {
         JSONObject targetObject = new JSONObject();
         targetObject.put("bpmCellName", bpmCellName);
@@ -140,6 +153,8 @@ public class IBMBPM857JSONEventConverter implements JSONEventConverter {
     }
 
     /**
+     * Retrieves the tracking point data of application data object.
+     *
      * @param applicationData Application Data with <code>JSONObject</code>
      * @param sectionKey      the key of section
      * @return <code>JSONArray</code>
