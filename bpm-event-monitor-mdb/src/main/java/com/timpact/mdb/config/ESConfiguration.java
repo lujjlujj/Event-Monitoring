@@ -39,6 +39,13 @@ public class ESConfiguration {
     @JsonProperty
     private boolean mergeEventRequired;
 
+    @JsonProperty
+    private boolean securityRequired;
+    @JsonProperty
+    private String username;
+    @JsonProperty
+    private String password;
+
     public String getHosts() {
         return hosts;
     }
@@ -93,5 +100,29 @@ public class ESConfiguration {
 
     public void setMergeEventRequired(boolean mergeEventRequired) {
         this.mergeEventRequired = mergeEventRequired;
+    }
+
+    public boolean isSecurityRequired() {
+        return securityRequired;
+    }
+
+    public void setSecurityRequired(boolean securityRequired) {
+        this.securityRequired = securityRequired;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }

@@ -2,10 +2,14 @@ generateLogRequred: true
 convertXml2JsonRequired: false
 jsonVersion: 8.5.7
 esConfiguration:
-    hosts: 115.28.47.100:9200
+    hosts: lb-m3vemj2zh2dva.uksouth.cloudapp.azure.com:9200
     index: bpm-events
     activityType: ActivitySummary
     processType: ProcessSummary
-    enabled: false
-    timeout: 1000
+    enabled: true
+    mergeEventRequired: true
+    timeout: 20000
+    securityRequired: true
+    username: elastic
+    password: Tw0mbl3s1235
 bpmCellName: bpmCell01

@@ -20,6 +20,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLParser;
 import com.timpact.mdb.Event.IBMBPM857JSONEventConverter;
 import com.timpact.mdb.Event.IBMBPMEventConstants;
 import com.timpact.mdb.Event.JSONEventConverter;
+import com.timpact.mdb.config.ESConfiguration;
 import com.timpact.mdb.config.MDBConfiguration;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
@@ -37,6 +38,7 @@ import javax.jms.Message;
 import javax.jms.MessageListener;
 import javax.jms.TextMessage;
 import java.io.InputStream;
+import java.util.Base64;
 
 /**
  * Created by Terry on 17-9-21.
@@ -156,6 +158,7 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
         PostMethod postMethod = new PostMethod("http://" + config.getEsConfiguration().getHosts() + "/"
                 + config.getEsConfiguration().getIndex() + "/"
                 + indexType + "/" + eventId + "/_update?pretty");
+        addSecurity(postMethod, config.getEsConfiguration());
         JSONObject data = new JSONObject();
         data.put("doc", jsonObject);
         StringRequestEntity requestEntity = new StringRequestEntity(
@@ -176,6 +179,7 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
         GetMethod getMethod = new GetMethod("http://" + config.getEsConfiguration().getHosts() + "/"
                 + config.getEsConfiguration().getIndex() + "/"
                 + getIndexType(eventType) + "/_search?q=" + queryCondition + "&pretty");
+        addSecurity(getMethod, config.getEsConfiguration());
         httpClient.executeMethod(getMethod);
         handleHttpResponse(getMethod);
         JSONObject result = new JSONObject(getMethod.getResponseBodyAsString());
@@ -279,7 +283,7 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
         StringRequestEntity requestEntity = new StringRequestEntity(
                 jsonObject.toString(), "application/json", "UTF-8");
         postMethod.setRequestEntity(requestEntity);
-
+        addSecurity(postMethod, config.getEsConfiguration());
         // Set the message timeout
         if (config.getEsConfiguration().getTimeout() != 0) {
             httpClient.getHttpConnectionManager().
@@ -316,5 +320,13 @@ public class MonitorEventMessageDrivenBean implements MessageListener {
     private void handleHttpResponse(HttpMethodBase method) throws Exception {
         JSONObject result = new JSONObject(method.getResponseBodyAsString());
         log.info(result.toString());
+    }
+
+    private void addSecurity(HttpMethodBase methodBase, ESConfiguration esConfiguration) {
+        if (esConfiguration.isSecurityRequired()) {
+            String authStr = esConfiguration.getUsername() + ":" + esConfiguration.getPassword();
+            String encoding = Base64.getEncoder().encodeToString(new String(authStr).getBytes());
+            methodBase.setRequestHeader("Authorization", "Basic " + encoding);
+        }
     }
 }

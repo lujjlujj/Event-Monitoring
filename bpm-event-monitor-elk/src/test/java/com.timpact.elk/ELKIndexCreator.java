@@ -14,12 +14,15 @@ package com.timpact.elk;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpException;
+import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.commons.httpclient.methods.*;
 import org.apache.commons.lang3.StringUtils;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.Test;
@@ -39,13 +42,20 @@ public class ELKIndexCreator {
 
     private static String ACTIVITY_TYPE_NAME = "ActivitySummary";
 
-    private static String URL = "http://115.28.47.100:9200/";
+    private static String URL = "http://lb-m3vemj2zh2dva.uksouth.cloudapp.azure.com:9200/";
+
+    private static String username = "elastic";
+
+    private static String password = "Tw0mbl3s1235";
+
+    private static boolean enableSecurity = true;
 
     private HttpClient httpClient = new HttpClient();
 
     @Test
     public void createIndex() throws JSONException, HttpException, IOException {
         PutMethod putMethod = new PutMethod(URL + INDEX_NAME);
+        addSecurity(putMethod);
         JSONObject masterObject = new JSONObject();
         JSONObject settingObject = new JSONObject();
         settingObject.put("number_of_shards", 3);
@@ -58,10 +68,10 @@ public class ELKIndexCreator {
         System.out.println(putMethod.getResponseBodyAsString());
     }
 
-
     @Test
     public void getIndex() throws HttpException, IOException {
         GetMethod getMethod = new GetMethod(URL + INDEX_NAME);
+        addSecurity(getMethod);
         httpClient.executeMethod(getMethod);
         System.out.println(getMethod.getResponseBodyAsString());
     }
@@ -69,9 +79,11 @@ public class ELKIndexCreator {
     @Test
     public void deleteIndex() throws HttpException, IOException {
         DeleteMethod deleteMethod = new DeleteMethod(URL + INDEX_NAME);
+        addSecurity(deleteMethod);
         httpClient.executeMethod(deleteMethod);
         System.out.println(deleteMethod.getResponseBodyAsString());
     }
+
     @Test
     public void rebuildIndex() throws Exception {
         deleteIndex();
@@ -85,6 +97,7 @@ public class ELKIndexCreator {
             IOException {
         PutMethod putMethod = new PutMethod(URL + INDEX_NAME + "/_mapping/"
                 + PROCESS_TYPE_NAME + "?pretty");
+        addSecurity(putMethod);
         JSONObject propertyObject = new JSONObject();
         JSONObject fieldObject = new JSONObject();
         fieldObject.put("bpmCellName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
@@ -115,6 +128,7 @@ public class ELKIndexCreator {
             IOException {
         PutMethod putMethod = new PutMethod(URL + INDEX_NAME + "/_mapping/"
                 + ACTIVITY_TYPE_NAME + "?pretty");
+        addSecurity(putMethod);
         JSONObject propertyObject = new JSONObject();
         JSONObject fieldObject = new JSONObject();
         fieldObject.put("bpmCellName", createFieldPropertyJSONObject("string", "not_analyzed", ""));
@@ -150,7 +164,8 @@ public class ELKIndexCreator {
 
 
         GetMethod getMethod = new GetMethod(URL + INDEX_NAME + "/_mapping/"
-                + PROCESS_TYPE_NAME + "?size=60&pretty");
+                + PROCESS_TYPE_NAME + "?pretty");
+        addSecurity(getMethod);
         httpClient.executeMethod(getMethod);
         System.out.println(getMethod.getResponseBodyAsString());
 
@@ -160,31 +175,93 @@ public class ELKIndexCreator {
     public void searchDataForProcess() throws HttpException, Exception {
         JSONObject condition = new JSONObject();
         //condition.put("_source.processInstanceUUID", "bpmCell01-c904b3b1-afc1-4698-bf5a-a20892c20275.2064.f5fa8035-29e3-4ee9-9dfb-cda7ae1f249d.705");
-        condition.put("_id","AV_AhpMG0_Pl3klLvTRT");
+        condition.put("_id", "AV_AhpMG0_Pl3klLvTRT");
         JSONObject term = new JSONObject();
         term.put("term", condition);
         JSONObject query = new JSONObject();
         query.put("query", term);
-
 //        GetMethod postMethod = new GetMethod(URL + INDEX_NAME + "/"
 //                + PROCESS_TYPE_NAME + "/_search?q=processInstanceUUID:bpmCell01-c904b3b1-afc1-4698-bf5a-a20892c20275.2064.f5fa8035-29e3-4ee9-9dfb-cda7ae1f249d.705&pretty");
         GetMethod postMethod = new GetMethod(URL + INDEX_NAME + "/"
                 + PROCESS_TYPE_NAME + "/_search?pretty");
-
-
+        addSecurity(postMethod);
         httpClient.executeMethod(postMethod);
         System.out.println(postMethod.getResponseBodyAsString());
     }
 
     @Test
     public void searchDataForActivity() throws HttpException, IOException {
-        PostMethod potMethod = new PostMethod(URL + INDEX_NAME + "/"
-                + ACTIVITY_TYPE_NAME + "/_search?size=70&pretty");
-        System.out.print(potMethod.getURI().toString());
-        httpClient.executeMethod(potMethod);
-        System.out.println(potMethod.getResponseBodyAsString());
+        PostMethod postMethod = new PostMethod(URL + INDEX_NAME + "/"
+                + ACTIVITY_TYPE_NAME + "/_search?size=100&pretty");
+        addSecurity(postMethod);
+        System.out.print(postMethod.getURI().toString());
+        httpClient.executeMethod(postMethod);
+        System.out.println(postMethod.getResponseBodyAsString());
     }
 
+    @Test
+    public void replicateProcessData() throws Exception {
+        PostMethod postMethod = new PostMethod("http://115.28.47.100:9200/" + INDEX_NAME + "/"
+                + PROCESS_TYPE_NAME + "/_search?size=100&pretty");
+        System.out.print(postMethod.getURI().toString());
+        httpClient.executeMethod(postMethod);
+        JSONObject result = new JSONObject(postMethod.getResponseBodyAsString());
+        JSONArray array = result.getJSONObject("hits").getJSONArray("hits");
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject entry = array.getJSONObject(i).getJSONObject("_source");
+            PostMethod post = new PostMethod(URL + INDEX_NAME + "/"
+                    + PROCESS_TYPE_NAME + "?pretty");
+            StringRequestEntity requestEntity = new StringRequestEntity(
+                    entry.toString(), "application/json", "UTF-8");
+            post.setRequestEntity(requestEntity);
+            addSecurity(post);
+            httpClient.executeMethod(post);
+            System.out.println(post.getResponseBodyAsString());
+        }
+    }
+
+    @Test
+    public void replicateActivityData() throws Exception {
+        PostMethod postMethod = new PostMethod("http://115.28.47.100:9200/" + INDEX_NAME + "/"
+                + ACTIVITY_TYPE_NAME + "/_search?size=100&pretty");
+        System.out.print(postMethod.getURI().toString());
+        httpClient.executeMethod(postMethod);
+        JSONObject result = new JSONObject(postMethod.getResponseBodyAsString());
+        JSONArray array = result.getJSONObject("hits").getJSONArray("hits");
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject entry = array.getJSONObject(i).getJSONObject("_source");
+            PostMethod post = new PostMethod(URL + INDEX_NAME + "/"
+                    + ACTIVITY_TYPE_NAME + "?pretty");
+            StringRequestEntity requestEntity = new StringRequestEntity(
+                    entry.toString(), "application/json", "UTF-8");
+            post.setRequestEntity(requestEntity);
+            addSecurity(post);
+            httpClient.executeMethod(post);
+            System.out.println(post.getResponseBodyAsString());
+        }
+    }
+
+    @Test
+    public void deleteAllActivityDocument() throws Exception {
+        PostMethod postMethod = new PostMethod(URL + INDEX_NAME + "/"
+                + ACTIVITY_TYPE_NAME + "/_delete_by_query");
+        addSecurity(postMethod);
+        System.out.print(postMethod.getURI().toString());
+        httpClient.executeMethod(postMethod);
+        System.out.println(postMethod.getResponseBodyAsString());
+    }
+
+    @Test
+    public void deleteAllProcessDocument() throws Exception {
+        PostMethod postMethod = new PostMethod(URL + INDEX_NAME + "/"
+                + PROCESS_TYPE_NAME + "/_delete_by_query");
+        addSecurity(postMethod);
+        System.out.print(postMethod.getURI().toString());
+        httpClient.executeMethod(postMethod);
+        System.out.println(postMethod.getResponseBodyAsString());
+
+
+    }
 
     private JSONObject createFieldPropertyJSONObject(String type, String index,
                                                      String format) throws JSONException {
@@ -198,5 +275,13 @@ public class ELKIndexCreator {
             property.put("format", format);
         }
         return property;
+    }
+
+    private void addSecurity(HttpMethodBase methodBase) {
+        if (enableSecurity) {
+            String authStr = username + ":" + password;
+            String encoding = Base64.getEncoder().encodeToString(new String(authStr).getBytes());
+            methodBase.setRequestHeader("Authorization", "Basic " + encoding);
+        }
     }
 }
